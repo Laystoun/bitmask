@@ -5,6 +5,8 @@
 #include <iostream>
 #include <vector>
 #include <map>
+#include <cstring>
+#include "arp_spoof.h"
 
 typedef std::vector<pcap_if_t*>::iterator pcap_iterator;
 
@@ -21,7 +23,7 @@ struct core {
             throw std::runtime_error("Network error: " + std::string(error_buff));
 
         for (pcap_if_t* d = alldevs; d != nullptr; d = d->next) {
-            devices.push_back(d);    
+            devices.push_back(d);
         }
         device_ch();
         capture();
@@ -43,7 +45,25 @@ struct core {
             if (choise.empty()) is_empty=true;
             
             if (is_empty) {
-                master_device = devices.at(0);
+                for (pcap_iterator it = devices.begin(); it != devices.end(); ++it) {
+                    if ((*it)->addresses != nullptr) {
+                        char errbuf[PCAP_ERRBUF_SIZE];
+                        
+                        pcap_t* openl = pcap_open_live(
+                            (*it)->name,
+                            65536,
+                            PCAP_OPENFLAG_PROMISCUOUS,
+                            1000,
+                            errbuf
+                        );
+
+                        if (openl != nullptr) {
+                            master_device = *it;
+                            pcap_close(openl);
+                            break;
+                        }
+                    }
+                }
                 std::cout << "[INFO] "
                           << "Auto-selected: "
                           << (master_device->description ? master_device->description : master_device->name) << std::endl;
@@ -84,44 +104,8 @@ struct core {
         if (header->caplen < 42) return;
 
         if (data[12] != 0x08 || data[13] != 0x06) return;
-
-        const u_char* arp = data + 14;
-
-        const u_char* sender_mac = arp + 8;
-        const u_char* sender_ip = arp + 14;
-
-        std::string ip = ip_to_str(sender_ip);
-        std::string mac = mac_to_str(sender_mac);
-
-        if (arp_table.find(ip) == arp_table.end()) {
-            arp_table[ip] = mac;
-            std::cout << "[+] " << ip << "->" << mac << std::endl;
-        } else if (arp_table[ip] != mac) {
-            std::cout << "[WARNING!] ARP SPOOFING ATTEMPT!\n"
-                      << "IP: " << ip << std::endl
-                      << "OLD MAC: " << arp_table[ip] << std::endl
-                      << "NEW MAC: " << mac << std::endl;
-
-            arp_table[ip] = mac;
-        }
-    }
-
-    static std::string mac_to_str(const u_char* mac) {
-        char buf[18];
-        sprintf(buf,
-            "%02X:%02X:%02X:%02X:%02X:%02X",
-            mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]
-        );
-        return buf;
-    }
-
-    static std::string ip_to_str(const u_char* ip) {
-        char buf[16];
-        sprintf(buf,
-            "%d.%d.%d.%d",
-            ip[0], ip[1], ip[2], ip[3]
-        );
-        return buf;
+        else 
+            spoof_detector(data);
     }
 
     ~core() {
