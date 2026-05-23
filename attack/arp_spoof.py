@@ -13,7 +13,7 @@ def test_arp_spoof_detection():
 
     arp_layer = ARP(
         op=2,
-        psrc=target_ip,
+        psrc=LOCAL_GATEAWAY_ROUTER_IP,
         hwsrc=fake_mac,
         hwdst="FF:FF:FF:FF:FF:FF"
     )
