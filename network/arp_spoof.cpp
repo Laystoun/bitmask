@@ -18,15 +18,15 @@ static std::string ip_to_str(const u_char* ip) {
     return buf;
 }
 
-void spoof_detector(const u_char* data) {
-    const u_char* arp = data + 14;
+void arp_spoof_detector(const u_char* packet, const struct pcap_pkthdr* header) {
+    if (header->caplen < 42) return;
+    
+    const u_char* arp = packet + 14;
     const u_char* sender_mac = arp + 8;
     const u_char* sender_ip = arp + 14;
     
     std::string ip = ip_to_str(sender_ip);
     std::string mac = mac_to_str(sender_mac);
-
-    std::cout << "[ARP] " << ip << " -> " << mac << std::endl;
     
     if (arp_table.find(ip) == arp_table.end()) {
         arp_table[ip] = mac;
