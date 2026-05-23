@@ -1,12 +1,19 @@
 #ifndef CORE_H
 #define CORE_H
 
+#define PACKET_HEADER_SIZE 0x0E
+#define ARP_PROTOCOL_12 0x08
+#define ARP_PROTOCOL_13 0x06
+#define IPV4_1 0x008
+#define IPV4_2 0x00
+
 #include <pcap.h>
 #include <iostream>
 #include <vector>
 #include <map>
 #include <cstring>
 #include "arp_spoof.h"
+#include "dns_spoof.h"
 
 typedef std::vector<pcap_if_t*>::iterator pcap_iterator;
 
@@ -19,6 +26,7 @@ struct core {
     std::vector<pcap_if_t*> devices;
     pcap_if_t* master_device;
     core() {
+        std::cout.setf(std::ios::unitbuf); // disable bufferized
         if (pcap_findalldevs(&alldevs, error_buff) == -1)
             throw std::runtime_error("Network error: " + std::string(error_buff));
 
@@ -101,11 +109,12 @@ struct core {
     }
 
     static void pcap_handler(u_char *user, const struct pcap_pkthdr* header, const u_char* data) {
-        if (header->caplen < 42) return;
-
-        if (data[12] != 0x08 || data[13] != 0x06) return;
-        else 
-            spoof_detector(data);
+        u_char ETH_HEADER_1 = data[12];
+        u_char ETH_HEADER_2 = data[13];
+        
+        if (ETH_HEADER_1 == ARP_PROTOCOL_12 && ETH_HEADER_2 == ARP_PROTOCOL_13) arp_spoof_detector(data, header);
+        if (ETH_HEADER_1 == IPV4_1 && ETH_HEADER_2 == IPV4_2)
+            if (header->caplen >= 23) dns_spoof_detector(data, header);
     }
 
     ~core() {
