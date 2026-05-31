@@ -6,8 +6,16 @@
 
 #include <pcap.h>
 #include <map>
+#include <string>
+#include <chrono>
 
-typedef std::map<uint16_t, uint32_t> dns_map;
+struct dns_record {
+    uint32_t ip;
+    std::chrono::steady_clock::time_point timestamp;
+};
+
+typedef std::map<std::pair<uint16_t, std::string>, dns_record> dns_map;
 void dns_spoof_detector(const u_char* packet, const struct pcap_pkthdr* header);
+std::string parse_domain(const u_char* dns, const u_char* ptr);
 
 #endif
