@@ -1,6 +1,6 @@
 from scapy.all import Ether, IP, UDP, DNS, DNSRR, sendp
 
-MY_ADAPTER = "YOUR NETWORK INTERFACE NAME"
+MY_ADAPTER = "YOU INTERNET ADAPTER"
 TRANS_ID = 1337
 
 def send_dns_response(ip_answer):
