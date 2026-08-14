@@ -6,7 +6,9 @@
 
 void crypto_cli(CryptoEntry& crypto_entry) {
     Kyznechik kyz;
-    encrypt_something(kyz, crypto_entry);
+    
+    if (crypto_entry.crypto_flags.is_encrypt) encrypt_something(kyz, crypto_entry);
+    if (crypto_entry.crypto_flags.is_decrypt) decrypt_something(kyz, crypto_entry);
 }
 
 void network_cli(NetworkEntry& network_entry) {
