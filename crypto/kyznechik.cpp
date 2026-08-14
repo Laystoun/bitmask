@@ -149,6 +149,8 @@ void Kyznechik::init() {
     }
 
     expand_keys();
+
+    kyz_fingerprint(*this);
 }
 
 void Kyznechik::L_tranformation_inv(uint8_t *p_inf) {
@@ -168,6 +170,58 @@ void Kyznechik::R_transformation_inv(uint8_t *p_inf) {
     for (int i = 0; i < 16; i++) sum ^= L_COEFFS[i][p_inf[i]];
 
     p_inf[15] = sum;
+}
+
+void Kyznechik::decrypt_block_x8_avx2(uint8_t *p_inf) {
+    __m256i b1 = _mm256_loadu_si256((__m256i*)(p_inf + 0));
+    __m256i b2 = _mm256_loadu_si256((__m256i*)(p_inf + 32));
+    __m256i b3 = _mm256_loadu_si256((__m256i*)(p_inf + 64));
+    __m256i b4 = _mm256_loadu_si256((__m256i*)(p_inf + 96));
+
+    __m128i k128 = _mm_loadu_si128((__m128i*)ROUND_KEYS[9].data());
+    __m256i key = _mm256_set_m128i(k128, k128);
+
+    b1 = _mm256_xor_si256(b1, key);
+    b2 = _mm256_xor_si256(b2, key);
+    b3 = _mm256_xor_si256(b3, key);
+    b4 = _mm256_xor_si256(b4, key);
+
+    _mm256_storeu_si256((__m256i*)p_inf, b1);
+    _mm256_storeu_si256((__m256i*)(p_inf + 32), b2);
+    _mm256_storeu_si256((__m256i*)(p_inf + 64), b3);
+    _mm256_storeu_si256((__m256i*)(p_inf + 96), b4);
+
+    for (int i = 8; i >= 0; i--) {
+        for (int b = 0; b < 8; b++) {
+            uint8_t *blk = p_inf + b * 16;
+            L_tranformation_inv(blk);
+            S_transformation_inv(blk);
+
+            __m128i block = _mm_loadu_si128((__m128i*)blk);
+            __m128i rkey = _mm_loadu_si128((__m128i*)ROUND_KEYS[i].data());
+            block = _mm_xor_si128(block, rkey);
+            _mm_storeu_si128((__m128i*)blk, block);
+        }
+    }
+}
+
+void Kyznechik::decrypt_block_x8_base(uint8_t *p_inf) {
+    const uint8_t* key9 = ROUND_KEYS[9].data();
+    for (int b = 0; b < 8; b++)
+        for (int j = 0; j < 16; j++)
+            p_inf[b * 16 + j] ^= key9[j];
+
+    for (int i = 8; i >= 0; i--) {
+        for (int b = 0; b < 8; b++) {
+            uint8_t *blk = p_inf + b * 16;
+            L_tranformation_inv(blk);
+            S_transformation_inv(blk);
+
+            const uint8_t* rkey = ROUND_KEYS[i].data();
+            for (int j = 0; j < 16; j++)
+                blk[j] ^= rkey[j];
+        }
+    }
 }
 
 void Kyznechik::decrypt_block(uint8_t *p_inf) {
