@@ -1,21 +1,13 @@
-/*
-    master_key => The master key is required to expand to 10 round keys. The master key size is 256 bits (32 bytes).    
-    S => s-block for substituting a unit of information to it
-    IS => inverted s-box for substitution of a unit of information for decryption
-    L_COEFFS => constant coefficients used in the L_transformation operation and byte compression
-    ROUND_KEYS => It is intended for storing round keys (10 keys). Size 1 rounded key -> 128bit (16byte).
+/*  Copyright (c) 2020-2026 Bitmask developers
+ *  Distributed under the GNU General Public License v2.0,
+ *  see the accompanying file COPYING or
+ *  https://www.gnu.org/licenses/old-licenses/gpl-2.0.html
+ */
 
-    variable:
-    p_inf => pointer to the first byte in the information block
-    coeff => 1 coefficient in L_COEFFS table.
+// Implementation of the Kuznechik encryption algorithm (GOST R 34.12-2015, GOST R 34.12-2018)
+// Basic implementation: https://datatracker.ietf.org/doc/html/rfc7801
 
-    functions (not all):
-    init => Initialization of fields and cipher state
-    L_transformation => just calling R_transformation
-    R_transformation => compression and mixing of all bytes into one is needed to achieve the avalanche effect
-    GF_mul => multiplication in Galois field
-    S_transformation => substitution of the s-block value in place of the byte value
-*/
+// Authors of the algorithm FSB of Russia, JSC «InfoTeCs» 
 
 #ifndef KYZNECHIK_H
 #define KYZNECHIK_H
@@ -4499,6 +4491,8 @@ public:
     void expand_keys();
     void encrypt_block_x8_base(uint8_t* p_inf);
     void encrypt_block_x8_avx2(uint8_t* p_inf);
+    void decrypt_block_x8_base(uint8_t* p_inf);
+    void decrypt_block_x8_avx2(uint8_t* p_inf);
     void decrypt_block(uint8_t* p_inf);
 
     // CBC ENCRYPT MODE
@@ -4556,4 +4550,4 @@ public:
     
 };
 
-#endif
+#endif // KYZNECHIK_H
