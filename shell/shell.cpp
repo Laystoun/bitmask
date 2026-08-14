@@ -9,8 +9,16 @@ void register_entries(CLI::App& app,CryptoEntry& crypto_entry, NetworkEntry& net
 
 void register_crypto_sub(CLI::App& app, CryptoEntry& entry) {
     app.add_flag("--verbose, -v", entry.crypto_flags.verbose, "details and benchbark");
-    app.add_flag("--emergency, -e", entry.crypto_flags.emergency, "emergency shutdown (later)");
+    app.add_flag("--emergency", entry.crypto_flags.emergency, "emergency shutdown (later)");
     app.add_flag("--no-simd, --ns", entry.crypto_flags.no_simd, "disable simd-avx2 instruction");
+    
+    auto* mode = app.add_option_group("Crypto module mode");
+    
+    mode->add_flag("-e, --enc, --encrypt", entry.crypto_flags.is_encrypt, "is encrypt mode");
+    mode->add_flag("-d, --dec, --decrypt", entry.crypto_flags.is_decrypt, "is decrypt mode");
+
+    mode->require_option(1);
+
 
     app.add_option("--input, --in", entry.crypto_values.in, "file to encrypt")
         ->required()
