@@ -1,12 +1,9 @@
 cmake_minimum_required(VERSION 3.22)
-
 project(
     bitmask
     DESCRIPTION "bitmask software"
 )
-
 find_package(OpenMP REQUIRED)
-
 add_executable(bitmask
     crypto/kyznechik.cpp
     crypto/utils/cli.cpp
@@ -19,18 +16,23 @@ add_executable(bitmask
     shell/main.cpp
     shell/shell.cpp
 )
-
 target_compile_options(bitmask PRIVATE
     -O3
 )
-
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     target_compile_options(bitmask PRIVATE -mavx2)
 endif()
-
 if(WIN32)
     target_compile_options(bitmask PRIVATE -municode)
     target_link_options(bitmask PRIVATE -municode)
+endif()
+
+if(MINGW OR CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+    target_link_options(bitmask PRIVATE
+        -static
+        -static-libgcc
+        -static-libstdc++
+    )
 endif()
 
 set_target_properties(bitmask PROPERTIES
@@ -38,15 +40,13 @@ set_target_properties(bitmask PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_SOURCE_DIR}/build"
     RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_SOURCE_DIR}/build"
 )
-
 target_include_directories(bitmask PRIVATE
-    "C:/Users/docer/desktop/files_folders/libsodium-win64/include"
-    "C:/Users/docer/Desktop/Files_Folders/npcap/Include"
+    "${CMAKE_SOURCE_DIR}/Include/sodium/include"
+    "${CMAKE_SOURCE_DIR}/Include/npcap/Include"
 )
-
 target_link_libraries(bitmask PRIVATE
     OpenMP::OpenMP_CXX
-    "C:/Users/docer/desktop/files_folders/libsodium-win64/lib/libsodium.a"
-    "C:/Users/docer/desktop/files_folders/npcap/Lib/x64/wpcap.lib"
-    "C:/Users/docer/desktop/files_folders/npcap/Lib/x64/Packet.lib"
+    "${CMAKE_SOURCE_DIR}/Include/sodium/lib/libsodium.a"
+    "${CMAKE_SOURCE_DIR}/Include/npcap/Lib/x64/wpcap.lib"
+    "${CMAKE_SOURCE_DIR}/Include/npcap/Lib/x64/Packet.lib"
 )
