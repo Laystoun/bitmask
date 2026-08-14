@@ -17,6 +17,8 @@ struct CryptoFlags {
     bool verbose;
     bool pbdkf2;
     bool emergency; // then
+    bool is_encrypt = false;
+    bool is_decrypt = false;
     bool no_simd = false;
 };
 
