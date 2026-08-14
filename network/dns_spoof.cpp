@@ -1,6 +1,8 @@
-#include "dns_spoof.h"
 #include <iostream>
 #include <chrono>
+
+#include "dns_spoof.h"
+#include "../shell/shell.h"
 
 #define COMPRESSION_POINTER 0xC0 // 11000000
 
@@ -30,14 +32,14 @@ void cleanup() {
     for (auto it = dns_table.begin(); it != dns_table.end();) {
         auto age = std::chrono::duration_cast<std::chrono::seconds>(
             now - it->second.timestamp).count();
-        if (age > 10) // удаляем записи старше 10 секунд
+        if (age > 10)
             it = dns_table.erase(it);
         else
             ++it;
     }
 }
 
-void dns_spoof_detector(const u_char* packet, const struct pcap_pkthdr* header) {
+void dns_spoof_detector(const u_char* packet, const struct pcap_pkthdr* header, NetworkEntry* network_entry) {
     if (header->caplen < ETH_MIN_SIZE + 20 + 8) return;
     const u_char* ipv4 = packet + 14;
     if (*(ipv4 + 9) != UDP_HEADER_BYTE) return;
@@ -52,7 +54,8 @@ void dns_spoof_detector(const u_char* packet, const struct pcap_pkthdr* header) 
     bool is_response = ((dns[2] & 0x80) != 0) ? true:false; if (!is_response) return;
     uint16_t trans_id = (dns[0] << 8) | dns[1];
     std::string domain=parse_domain(dns, dns+12);
-    std::cout << "Domain: " << domain << "\n";
+    
+    if(network_entry->network_flags.verbose) std::cout << "Domain: " << domain << "\n";
     const u_char* ptr = dns + 12;  // Jump to Answer
     while(*ptr != 0x00) {
         if((*ptr & 0xC0)==COMPRESSION_POINTER) {ptr += 2; break;}
@@ -85,5 +88,12 @@ void dns_spoof_detector(const u_char* packet, const struct pcap_pkthdr* header) 
                                    << ((ip >> 8)  & 0xFF) << "."
                                    << (ip & 0xFF) << "\n"
                 << "Transaction ID: " << trans_id << std::endl;
+
+            if (network_entry->network_start_type == NetworkStartType::EMERGENCY) {
+                
+                // Implementing disconnection from the internet
+                
+                std::cout << "Internet connection was reset..." << "\n";
+            }
         }
 }

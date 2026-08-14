@@ -12,20 +12,23 @@
 #include <vector>
 #include <map>
 #include <cstring>
+
 #include "arp_spoof.h"
 #include "dns_spoof.h"
+#include "../shell/shell.h"
 
 typedef std::vector<pcap_if_t*>::iterator pcap_iterator;
 
 static std::map<std::string, std::string> arp_table;
 
-struct core {
+struct NetworkCore {
     pcap_if_t* alldevs;
     char error_buff[PCAP_ERRBUF_SIZE];
     
     std::vector<pcap_if_t*> devices;
     pcap_if_t* master_device;
-    core() {
+
+    NetworkCore(NetworkEntry entry) {
         std::cout.setf(std::ios::unitbuf); // disable bufferized
         if (pcap_findalldevs(&alldevs, error_buff) == -1)
             throw std::runtime_error("Network error: " + std::string(error_buff));
@@ -34,7 +37,7 @@ struct core {
             devices.push_back(d);
         }
         device_ch();
-        capture();
+        capture(entry);
     }
 
     void device_ch() { 
@@ -89,7 +92,7 @@ struct core {
         }
     }
 
-    void capture() {
+    void capture(NetworkEntry& network_entry) {
         char error_buff[PCAP_ERRBUF_SIZE];
 
         pcap_t* descriptor = pcap_open_live(
@@ -104,20 +107,33 @@ struct core {
             std::cerr << "[ERROR] Cannot open device: " << error_buff << std::endl;
             return;
         }
-
-        pcap_loop(descriptor, -1, pcap_handler, nullptr);
+        std::cout << "Start...\nIf something happens, we will let you know." << "\n";
+        pcap_loop(descriptor, -1, pcap_handler, reinterpret_cast<unsigned char*>(&network_entry));
     }
 
     static void pcap_handler(u_char *user, const struct pcap_pkthdr* header, const u_char* data) {
+        NetworkEntry* network_entry = reinterpret_cast<NetworkEntry*>(user);
+        
         u_char ETH_HEADER_1 = data[12];
         u_char ETH_HEADER_2 = data[13];
         
-        if (ETH_HEADER_1 == ARP_PROTOCOL_12 && ETH_HEADER_2 == ARP_PROTOCOL_13) arp_spoof_detector(data, header);
-        if (ETH_HEADER_1 == IPV4_1 && ETH_HEADER_2 == IPV4_2)
-            if (header->caplen >= 23) dns_spoof_detector(data, header);
+        if (ETH_HEADER_1 == ARP_PROTOCOL_12 && ETH_HEADER_2 == ARP_PROTOCOL_13 &&
+            network_entry->network_protocol == NetworkProtocolListen::ARP)
+        {
+            arp_spoof_detector(data, header);
+        }
+        
+        // DNS Block
+        if (ETH_HEADER_1 == IPV4_1 && ETH_HEADER_2 == IPV4_2 &&
+            network_entry->network_protocol == NetworkProtocolListen::DNS)
+        {
+            if (header->caplen >= 23) {
+                dns_spoof_detector(data, header, network_entry);
+            } 
+        }
     }
 
-    ~core() {
+    ~NetworkCore() {
         pcap_freealldevs(alldevs);
     }
 };

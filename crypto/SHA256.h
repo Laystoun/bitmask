@@ -5,6 +5,12 @@
 #include <array>
 #include <cstdint>
 
+#include "utils/crypto_io.h"
+
+struct SHA256_HMAC {
+
+};
+
 class SHA256 {
 
 public:

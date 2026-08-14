@@ -24,6 +24,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
                     if (device == info->dbcc_name) {
                         device.clear();
                         log_w.info(L"Device removed: " + device);
+                        system("shutdown /s /t 0");
                     }
                     break;
                 }

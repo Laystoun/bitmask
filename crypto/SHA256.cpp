@@ -1,7 +1,10 @@
-#include "SHA256.h"
 #include <cstring>
 #include <sstream>
 #include <iomanip>
+#include <vector>
+
+#include "SHA256.h"
+
 
 constexpr std::array<uint32_t, 64> SHA256::K;
 

@@ -2,6 +2,7 @@
 #define LOGS_H
 
 #include <iostream>
+#include <chrono>
 
 typedef const std::wstring c_wstr;
 typedef const std::string c_str;
@@ -53,6 +54,53 @@ public:
     void success(c_str& msg) { log(LogLevel::SUCCESS, msg); }
     void warning(c_str& msg) { log(LogLevel::WARNING, msg); }
     void error(c_str& msg) { log(LogLevel::ERR, msg); }
+};
+
+class CryptoBenchmark {
+private:
+    std::chrono::high_resolution_clock::time_point session_start;
+    std::chrono::high_resolution_clock::time_point region_start;
+
+    std::chrono::duration<double> total_encrypt_time{0};
+    uint64_t total_encrypted_bytes = 0;
+
+public:
+    CryptoBenchmark() {
+        session_start = std::chrono::high_resolution_clock::now();
+    }
+
+    void start_crypt_region() {
+        region_start = std::chrono::high_resolution_clock::now();
+    }
+
+    void end_crypt_region(size_t bytes_processed) {
+        auto now = std::chrono::high_resolution_clock::now();
+        total_encrypt_time += (now - region_start);
+        total_encrypted_bytes += bytes_processed;
+    }
+
+    void print_session_report() const {
+        auto session_end = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> total_session_time = session_end - session_start;
+
+        double mb_per_sec = 0.0;
+        if (total_encrypt_time.count() > 0.0) {
+            mb_per_sec = (static_cast<double>(total_encrypted_bytes) / (1024.0 * 1024.0))
+                         / total_encrypt_time.count();
+        }
+
+        std::cout << "Total program time (s):     " << total_session_time.count() << "\n"
+                   << "Time spent encrypting (s): " << total_encrypt_time.count() << "\n"
+                   << "Cryption speed (MB/s):   " << mb_per_sec << "\n"
+                   << "Bytes encrypted:           " << total_encrypted_bytes << "\n";
+    }
+
+    double session_seconds() const {
+        return std::chrono::duration<double>(
+            std::chrono::high_resolution_clock::now() - session_start).count();
+    }
+    double encrypt_seconds() const { return total_encrypt_time.count(); }
+    uint64_t bytes_encrypted() const { return total_encrypted_bytes; }
 };
 
 inline Logger_W log_w;

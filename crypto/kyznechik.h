@@ -1,5 +1,4 @@
 /*
-*
     master_key => The master key is required to expand to 10 round keys. The master key size is 256 bits (32 bytes).    
     S => s-block for substituting a unit of information to it
     IS => inverted s-box for substitution of a unit of information for decryption
@@ -33,6 +32,9 @@
     #include <string.h>
     #include <strings.h>
 #endif
+
+#include "utils/key_utils.h"
+#include "../shell/shell.h"
 
 typedef std::array<uint8_t,16> r_key;
 
@@ -4485,6 +4487,7 @@ public:
     std::array<std::array<uint8_t,16>,10> ROUND_KEYS;
     std::array<std::array<uint8_t,16>,32> ITER_CONSTANTS;
 
+    // BASE | AVX2 ECB ENCRYPT MODE
     void init();
     void L_transformation(uint8_t* p_inf);
     void L_tranformation_inv(uint8_t* p_inf);
@@ -4494,10 +4497,19 @@ public:
     void S_transformation(uint8_t* p_inf);
     void S_transformation_inv(uint8_t* p_inf);
     void expand_keys();
-    void encrypt_block(uint8_t* p_inf);
+    void encrypt_block_x8_base(uint8_t* p_inf);
+    void encrypt_block_x8_avx2(uint8_t* p_inf);
     void decrypt_block(uint8_t* p_inf);
 
-    
+    // CBC ENCRYPT MODE
+    uint8_t cbc_prev_block[16];
+    void decrypt_block_single(uint8_t *blk);
+    void encrypt_block_single(uint8_t *blk);
+    void cbc_generate_iv();
+    void cbc_set_iv(const uint8_t* iv);
+    void cbc_encrypt_block(uint8_t* p_inf);
+    void cbc_decrypt_block(uint8_t* p_inf);
+
     ~Kyznechik() {
         volatile uint8_t* p = master_key;
             

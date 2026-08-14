@@ -9,13 +9,15 @@
 #include <string>
 #include <chrono>
 
+#include "../shell/shell.h"
+
 struct dns_record {
     uint32_t ip;
     std::chrono::steady_clock::time_point timestamp;
 };
 
 typedef std::map<std::pair<uint16_t, std::string>, dns_record> dns_map;
-void dns_spoof_detector(const u_char* packet, const struct pcap_pkthdr* header);
+void dns_spoof_detector(const u_char* packet, const struct pcap_pkthdr* header, NetworkEntry* network_entry);
 std::string parse_domain(const u_char* dns, const u_char* ptr);
 
 #endif
