@@ -3,3 +3,4 @@
 cmake/
 build/
 attack/remove.py
+Include/ninja.exe
