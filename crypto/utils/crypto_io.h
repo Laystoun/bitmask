@@ -30,7 +30,7 @@ using namespace std;
 
 #pragma pack(push, 1)
 struct EncryptFileHeader {
-    char magic[8] = { 'K', 'E', 'Y', 'G', 'E', 'N', '-', 'X' };
+    char magic[7] = { 'B', 'I', 'T', 'M', 'A', 'S', 'K' };
     uint8_t version = CURRENT_FORMAT_VERSION;
     uint8_t algorithm_mode;
     uint8_t salt[16];
@@ -243,6 +243,7 @@ public:
 
             if (sodium_memcmp(computed_tag, stored_tag, 32) != 0) {
                 throw std::runtime_error("MAC verification failed: wrong password/key or corrupted file.");
+                
             }
         }
 
