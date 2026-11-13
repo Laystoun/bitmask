@@ -83,22 +83,24 @@ void ChaCha20::quarter_core_avx2(uint32_t* keyStream) {
 
     for (size_t r = 0; r < 10; r++)
     {
+        /* LINEAR */
         quarter_round_avx2(s0, s4, s8,  s12);
         quarter_round_avx2(s1, s5, s9,  s13);
         quarter_round_avx2(s2, s6, s10, s14);
         quarter_round_avx2(s3, s7, s11, s15);
 
+        /* DIAGONAL */
         quarter_round_avx2(s0, s5, s10, s15);
         quarter_round_avx2(s1, s6, s11, s12);
         quarter_round_avx2(s2, s7, s8,  s13);
         quarter_round_avx2(s3, s4, s9,  s14);
     }
 
-    s0 = _mm256_add_epi32(s0, orig0);    s1 = _mm256_add_epi32(s1, orig1);
-    s2 = _mm256_add_epi32(s2, orig2);    s3 = _mm256_add_epi32(s3, orig3);
-    s4 = _mm256_add_epi32(s4, orig4);    s5 = _mm256_add_epi32(s5, orig5);
-    s6 = _mm256_add_epi32(s6, orig6);    s7 = _mm256_add_epi32(s7, orig7);
-    s8 = _mm256_add_epi32(s8, orig8);    s9 = _mm256_add_epi32(s9, orig9);
+    s0  = _mm256_add_epi32(s0, orig0  ); s1  = _mm256_add_epi32(s1, orig1  );
+    s2  = _mm256_add_epi32(s2, orig2  ); s3  = _mm256_add_epi32(s3, orig3  );
+    s4  = _mm256_add_epi32(s4, orig4  ); s5  = _mm256_add_epi32(s5, orig5  );
+    s6  = _mm256_add_epi32(s6, orig6  ); s7  = _mm256_add_epi32(s7, orig7  );
+    s8  = _mm256_add_epi32(s8, orig8  ); s9  = _mm256_add_epi32(s9, orig9  );
     s10 = _mm256_add_epi32(s10, orig10); s11 = _mm256_add_epi32(s11, orig11);
     s12 = _mm256_add_epi32(s12, orig12); s13 = _mm256_add_epi32(s13, orig13);
     s14 = _mm256_add_epi32(s14, orig14); s15 = _mm256_add_epi32(s15, orig15);
