@@ -5,7 +5,7 @@
 #include <array>
 #include <immintrin.h>
 
-class ChaCha20 {
+class ChaCha20AVX {
 private:
     __m256i consts_avx2[4];
     __m256i nonce_avx2[3];

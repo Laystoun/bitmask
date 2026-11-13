@@ -7,10 +7,10 @@
 // Basic Implementation: https://datatracker.ietf.org/doc/html/rfc7539
 // ChaCha20 designed by D. Bernstein 
 
-#include "ChaCha20.h"
+#include "chacha20-avx.h"
 #include <immintrin.h>
 
-void ChaCha20::init(uint8_t key[32], uint8_t nonce[12]) {
+void ChaCha20AVX::init(uint8_t key[32], uint8_t nonce[12]) {
     state[0] = 0x61707865;
     state[1] = 0x3320646e;
     state[2] = 0x79622d32;
@@ -29,7 +29,7 @@ void ChaCha20::init(uint8_t key[32], uint8_t nonce[12]) {
     for (int i = 0; i < 3; i++) nonce_avx2[i]  = _mm256_set1_epi32(state[i + 13]);
 }
 
-uint32_t ChaCha20::load32le(uint8_t* key) {
+uint32_t ChaCha20AVX::load32le(uint8_t* key) {
     return (
         key[0]       |
         key[1] << 8  |
@@ -38,21 +38,21 @@ uint32_t ChaCha20::load32le(uint8_t* key) {
     );
 }
 
-__m256i ChaCha20::rot32l(__m256i x, int n) {
+__m256i ChaCha20AVX::rot32l(__m256i x, int n) {
     return _mm256_or_si256(
         _mm256_slli_epi32(x, n),
         _mm256_srli_epi32(x, 32 - n)
     );
 }
 
-void ChaCha20::quarter_round_avx2(__m256i& a, __m256i& b, __m256i& c, __m256i& d) {
+void ChaCha20AVX::quarter_round_avx2(__m256i& a, __m256i& b, __m256i& c, __m256i& d) {
     a = _mm256_add_epi32(a, b); d = _mm256_xor_si256(d, a); d = rot32l(d, 16);
     c = _mm256_add_epi32(c, d); b = _mm256_xor_si256(b, c); b = rot32l(b, 12);
     a = _mm256_add_epi32(a, b); d = _mm256_xor_si256(d, a); d = rot32l(d, 8);
     c = _mm256_add_epi32(c, d); b = _mm256_xor_si256(b, c); b = rot32l(b, 7);
 }
 
-void ChaCha20::quarter_core_avx2(uint32_t* keyStream) {
+void ChaCha20AVX::quarter_core_avx2(uint32_t* keyStream) {
     __m256i s0 = consts_avx2[0];
     __m256i s1 = consts_avx2[1];
     __m256i s2 = consts_avx2[2];
@@ -148,7 +148,7 @@ void ChaCha20::quarter_core_avx2(uint32_t* keyStream) {
     store_pair(&keyStream[6*16],  &keyStream[7*16],  s3, s7, s11, s15);
 }
 
-void ChaCha20::crypto(uint8_t* input, int len) {
+void ChaCha20AVX::crypto(uint8_t* input, int len) {
     uint32_t keyStream[128];
 
     int i = 0;
