@@ -27,5 +27,11 @@ struct ChaCha20RFC
     void run();
 };
 
+void func()
+{
+    int* array = new int[3];
+
+    
+}
 
 #endif
