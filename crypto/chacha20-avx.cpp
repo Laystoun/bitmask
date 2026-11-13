@@ -7,7 +7,7 @@
 // Basic Implementation: https://datatracker.ietf.org/doc/html/rfc7539
 // ChaCha20 designed by D. Bernstein 
 
-#include "chacha20-avx.h"
+#include "chacha20-avx.hpp"
 #include <immintrin.h>
 
 void ChaCha20AVX::init(uint8_t key[32], uint8_t nonce[12]) {
@@ -19,7 +19,7 @@ void ChaCha20AVX::init(uint8_t key[32], uint8_t nonce[12]) {
     for (int i = 0; i < 8; i++)
         state[i + 4] = load32le(&key[i * 4]);
 
-    state[12] = 0;
+    state[12] = 1;
 
     for (int i = 0; i < 3; i++)
         state[i + 13] = load32le(&nonce[i * 4]);
