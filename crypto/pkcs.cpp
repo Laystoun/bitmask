@@ -6,7 +6,6 @@
 
 #include "pkcs.h"
 #include <iostream>
-#include <cassert>
 
 void pkcspad(std::vector<uint8_t>& block) {
     uint8_t pad_len = 16 - (block.size() % 16);
