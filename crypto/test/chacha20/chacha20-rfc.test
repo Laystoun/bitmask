@@ -1,0 +1,11 @@
+====== CHACHA20 - BASE =======
+Log 1.. quarter round: PASS
+Log 2.. block function: PASS
+Log 3.. cipher enc/dec: PASS
+
+====== CHACHA20 - AVX2 ========
+Log 1.. quarter round: PASS
+Log 2.. block function: PASS
+Log 3.. cipher enc/dec: PASS
+Log 4.. cross-check vs scalar: PASS
+
