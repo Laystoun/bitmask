@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <iostream>
 #include <utility>
+#include <iomanip>
 
 #include "bitmath.h"
 #include "bignum.h"
@@ -163,6 +164,30 @@ BigNum BigNum::operator%(const BigNum& other) const
     return this->divmod(other).second;
 }
 
+std::ostream& operator<<(std::ostream& os, const BigNum& obj) {
+    const std::ios_base::fmtflags saved_flags = os.flags();
+    const char saved_fill = os.fill();
+
+    if (obj.limbs.empty()) {
+        os << '0';
+    } else {
+        os << std::hex;
+        bool first = true;
+        for (auto it = obj.limbs.rbegin(); it != obj.limbs.rend(); ++it) {
+            if (first) {
+                os << *it;
+                first = false;
+            } else {
+                os << std::setw(8) << std::setfill('0') << *it;
+            }
+        }
+    }
+
+    os.flags(saved_flags);
+    os.fill(saved_fill);
+    return os;
+}
+
 BigNum BigNum::shiftLeft1() const {
     std::vector<uint32_t> result(limbs.size());
     uint32_t carry = 0;
@@ -209,13 +234,30 @@ bool BigNum::operator==(const BigNum& other) const
     return true;
 }
 
+static uint32_t mod_small(const BigNum& x, uint32_t p) {
+    uint64_t r = 0;
+    for (size_t i = x.limbs.size(); i-- > 0; ) {
+        r = ((r << 32) | x.limbs[i]) % p;
+    }
+    return (uint32_t)r;
+}
+
+static bool passes_small_primes(const BigNum& x) {
+    static const uint32_t small_primes[] = {3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47};
+    for (uint32_t p : small_primes) {
+        if (mod_small(x, p) == 0) return false;
+    }
+    return true;
+}
+
 BigNum BigNum::get_prime_number(size_t bit_size)
 {
     BigNum candidate = BigNum::generate_random(bit_size);
     BitMath b_math;
 
-    while (!b_math.is_probably_prime(candidate, 30))
-    {
+    while (true) {
+        if (passes_small_primes(candidate) && b_math.is_probably_prime(candidate, 8))
+            break;
         candidate = BigNum::generate_random(bit_size);
     }
 
@@ -229,7 +271,7 @@ vector<BigNum> BigNum::get_prime_numbers(size_t bit_size)
 
     do {
         n2 = get_prime_number(bit_size);
-    } while(n1 == n2);
+    } while (n1 == n2);
 
     return {n1, n2};
 }

@@ -19,6 +19,7 @@
 #include <cstdint>
 #include <vector>
 #include <utility>
+#include <iostream>
 
 #ifdef _WIN32
     #include <windows.h>
@@ -44,6 +45,7 @@ struct BigNum {
     BigNum operator*(const BigNum& other) const;
     BigNum operator/(const BigNum& other) const;
     BigNum operator%(const BigNum& other) const;
+    friend std::ostream& operator<<(std::ostream& os, const BigNum& obj);
 
     bool operator>=(const BigNum& other) const;
     bool operator==(const BigNum& other) const;

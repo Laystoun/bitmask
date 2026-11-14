@@ -5,6 +5,8 @@
 #include <vector>
 #include <cmath>
 #include <map>
+#include <stdexcept>
+#include <iostream>
 
 #include "bignum.h"
 
@@ -35,4 +37,10 @@ struct RSA_Base
     }
 
     RSA_Pair init();
+
+    std::vector<uint8_t> encrypt(const std::vector<uint8_t>& msg,
+                                 const std::vector<uint8_t>& label = {});
+                                 
+    std::vector<uint8_t> decrypt(const std::vector<uint8_t>& ct,
+                                 const std::vector<uint8_t>& label = {});
 };

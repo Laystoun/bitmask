@@ -5,41 +5,63 @@
 
 using namespace std;
 
+#include <chrono>
+
 RSA_Pair RSA_Base::init()
 {
-    BitMath bmath;
+    using clock = std::chrono::steady_clock;
+    auto ms = [](clock::time_point a, clock::time_point b) {
+        return std::chrono::duration_cast<std::chrono::milliseconds>(b - a).count();
+    };
 
-    vector<uint32_t> _zero { 0 };
-    vector<uint32_t> _one  { 1 };
-    vector<uint32_t> _exp  {RSA_EX};
-    
-    BigNum zero(_zero);
-    BigNum one (_one );
-    BigNum exp (_exp );
+    BitMath bmath;
+    vector<uint32_t> _zero{0}, _one{1}, _exp{RSA_EX};
+    BigNum zero(_zero), one(_one), e(_exp);
 
     BigNum gen(_zero);
-    vector<BigNum> n_gen = gen.get_prime_numbers(this->bit_size / 2);
+    BigNum n, eiler, d;
 
-    BigNum n = n_gen[0] * n_gen[1];
-    BigNum eiler = (n_gen[0] - one) * (n_gen[1] - one);
+    for (;;) {
+        auto t0 = clock::now();
+        vector<BigNum> p = gen.get_prime_numbers(bit_size / 2);
+        auto t1 = clock::now();
+        std::cerr << "primes: " << ms(t0, t1) << " ms\n";
 
-    BigNum d = bmath.mod_inverse(/*a=*/exp, /*m=*/eiler);
+        n     = p[0] * p[1];
+        eiler = (p[0] - one) * (p[1] - one);
 
-    RSA_Pair keys(/*priv=*/d, /*pub=*/n, /*exponent=*/exp);
+        auto t2 = clock::now();
+        try {
+            d = bmath.mod_inverse(e, eiler);
+            auto t3 = clock::now();
+            std::cerr << "mod_inverse: " << ms(t2, t3) << " ms\n";
+            break;
+        } catch (const std::runtime_error&) {
+            std::cerr << "mod_inverse failed, retry\n";
+        }
+    }
 
-    return keys;
+    return RSA_Pair(d, n, e);
+}
+
+BigNum rsa_encrypt(const BigNum& m, const BigNum& e, const BigNum& n)
+{
+    BitMath bm;
+    return bm.pow_mod(m, e, n);
+}
+
+BigNum rsa_decrypt(const BigNum& c, const BigNum& d, const BigNum& n)
+{
+    BitMath bm;
+    return bm.pow_mod(c, d, n);
 }
 
 int main()
 {
-    RSA_Base rsa(3072);
+    RSA_Base rsa {4096};
 
     
+    std::cout << "private key: " << rsa.keys.priv_key << "\n\n";
+    std::cout << "public key: " << rsa.keys.pub_key << "\n";
+    
 }
-
-/*
- *
- * We still need to implement RSA encryption and decryption.
- * At present, the generation of public and private keys has been fully implemented.
- *
- */
