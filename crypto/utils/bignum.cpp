@@ -23,7 +23,7 @@ using namespace std;
 BigNum BigNum::operator+(const BigNum& other) const
 {
     std::vector<uint32_t> result;
-    size_t n = std::max(limbs.size(), other.limbs.size());
+    size_t n = (std::max)(limbs.size(), other.limbs.size());
     result.reserve(n + 1);
     uint64_t crr = 0;
     uint64_t sum = 0;
@@ -115,29 +115,6 @@ bool BigNum::operator>=(const BigNum& other) const
     }
 
     return this->limbs.size() >= other.limbs.size();
-}
-
-BigNum BigNum::operator%(const BigNum& other) const {
-    std::vector<uint32_t> zeroVec{0};
-    BigNum remainder(zeroVec);
-    
-    size_t totalBits = limbs.size() * 32;
-
-    for (size_t idx = 0; idx < totalBits; idx++) {
-        size_t bitIndex = totalBits - 1 - idx;
-
-        remainder = remainder.shiftLeft1();
-
-        if (getBit(bitIndex)) {
-            remainder.limbs[0] |= 1;
-        }
-
-        if (remainder >= other) {
-            remainder = remainder - other;
-        }
-    }
-
-    return remainder;
 }
 
 std::pair<BigNum, BigNum> BigNum::divmod(const BigNum& other) const

@@ -15,7 +15,7 @@
 
 using namespace std;
 
-BigNum pow_mod(const BigNum& base_in, const BigNum& exp, const BigNum& mod)
+BigNum BitMath::pow_mod(const BigNum& base_in, const BigNum& exp, const BigNum& mod)
 {
     vector<uint32_t> r { 1 };
     BigNum result(r);

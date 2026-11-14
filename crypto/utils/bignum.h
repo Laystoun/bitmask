@@ -18,6 +18,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <vector>
+#include <utility>
 
 #ifdef _WIN32
     #include <windows.h>
@@ -61,19 +62,24 @@ struct BigNum {
     {
         size_t limbs_count = (bit_size + 31) / 32;
         std::vector<uint32_t> v(limbs_count, 0);
-    
+
         randombytes_buf(v.data(), v.size() * sizeof(uint32_t));
-    
+
         size_t extra_bits = limbs_count * 32 - bit_size;
         if (extra_bits > 0)
             v.back() &= (0xFFFFFFFFu >> extra_bits);
-    
+
         size_t top_bit_in_limb = (bit_size - 1) % 32;
         v.back() |= (1u << top_bit_in_limb);
-    
+
+        if (top_bit_in_limb > 0) {
+            v.back() |= (1u << (top_bit_in_limb - 1));
+        } else if (v.size() > 1) {
+            v[v.size() - 2] |= 0x80000000u;
+        }
+
         v[0] |= 1u;
-    
-        BigNum r(v);
-        return r;
+
+        return BigNum(v);
     }
 };
