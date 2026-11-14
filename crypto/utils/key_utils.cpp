@@ -22,23 +22,17 @@
 using namespace std;
 
 void derive_keys(const uint8_t master_secret[32], Kyznechik& kyz, SecureKey& out) {
-    crypto_kdf_derive_from_key(kyz.master_key, 32, 1, "KEYGEN-X", master_secret);
-    crypto_kdf_derive_from_key(out.mac_key, sizeof(out.mac_key), 2, "KEYGEN-X", master_secret);
+    crypto_kdf_derive_from_key(kyz.master_key, 32, 1, "BITMASK", master_secret);
+    crypto_kdf_derive_from_key(out.mac_key, sizeof(out.mac_key), 2, "BITMASK", master_secret);
 }
 
 void kyz_fingerprint(Kyznechik& kyz) {
-        cout << "\n\n" << "MASTER KEY (SHA256): ";
-        for (int m_key = 0; m_key < 32; m_key++) {
-            cout << hex << uppercase << setw(2)
-                 << setfill('0')
-                 << static_cast<int>(kyz.master_key[m_key]) << " ";
-        }
-        cout << dec;
-        cout << endl << endl;
-    
-        cout << "ROUND KEY FINGERPRINT (SHA256): \n" << endl;
-
-        key_finger_print(kyz.ROUND_KEYS);
+#ifdef KYZ_DEBUG_FINGERPRINT
+    cout << "\nROUND KEY FINGERPRINT (SHA256):\n" << endl;
+    key_finger_print(kyz.ROUND_KEYS);
+#else
+    (void)kyz;
+#endif
 }
 
 void key_finger_print(std::array<std::array<uint8_t, 16ULL>, 10ULL>& ROUND_KEY) {
