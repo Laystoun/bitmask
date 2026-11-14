@@ -1,3 +1,5 @@
+#pragma once
+
 #include "chacha20-avx.hpp"
 #include "chacha20.hpp"
 
