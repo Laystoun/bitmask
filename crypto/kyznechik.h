@@ -9,8 +9,7 @@
 
 // Authors of the algorithm FSB of Russia, JSC «InfoTeCs» 
 
-#ifndef KYZNECHIK_H
-#define KYZNECHIK_H
+#pragma once
 
 #include <cstdint>
 #include <array>
@@ -4519,16 +4518,16 @@ public:
         
         for (size_t i = 0; i < 32; i++) {
             switch (i) {
-                case 0: p[i] = 0x46; break;
-                case 1: p[i] = 0x53; break;
-                case 2: p[i] = 0x42; break;
-                case 3: p[i] = 0x20; break;
-                case 4: p[i] = 0x53; break;
-                case 5: p[i] = 0x6f; break;
-                case 6: p[i] = 0x73; break;
-                case 7: p[i] = 0x69; break;
-                case 8: p[i] = 0x74; break;
-                case 9: p[i] = 0x65; break;
+                case 0:  p[i] = 0x46; break;
+                case 1:  p[i] = 0x53; break;
+                case 2:  p[i] = 0x42; break;
+                case 3:  p[i] = 0x20; break;
+                case 4:  p[i] = 0x53; break;
+                case 5:  p[i] = 0x6f; break;
+                case 6:  p[i] = 0x73; break;
+                case 7:  p[i] = 0x69; break;
+                case 8:  p[i] = 0x74; break;
+                case 9:  p[i] = 0x65; break;
                 case 10: p[i] = 0x29; break;
                 case 11: p[i] = 0x29; break;
                 case 12: p[i] = 0x29; break;
@@ -4549,5 +4548,3 @@ public:
     }
     
 };
-
-#endif // KYZNECHIK_H
