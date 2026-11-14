@@ -1,0 +1,10 @@
+====== KUZNYECHIK - BASE =======
+Log 1.. S transformation (5.1)      : PASS
+Log 2.. R transformation (5.2)      : PASS
+Log 3.. L transformation (5.3)      : PASS
+Log 4.. iteration constants (5.4)   : PASS
+Log 5.. key schedule (5.4)          : PASS
+Log 6.. encryption (5.5)            : PASS
+Log 7.. decryption (5.6)            : PASS
+
+Total: 7/7 passed
