@@ -14,10 +14,10 @@
 #include <sodium.h>
 #include <functional>
 
-#include "../kyznechik.h"
-#include "../pkcs.h"
-#include "../../shell/shell.h"
-#include "../../shell/log/logs.h"
+#include "kyznechik.h"
+#include "pkcs.h"
+#include "../../shell/types.h"
+#include "shell/log/logs.h"
 #include "key_utils.h"
 #include "ux_render.h"
 
@@ -43,17 +43,16 @@ struct CryptoActions {
 public:
     using ProgressDisplay = std::function<void(unsigned long long processed_bytes)>;
 
-    void encrypt_file(Kyznechik& kyz,
-                      CryptoEntry& crypto_entry,
+    void encrypt_file(CryptoEntry& crypto_entry,
                       CryptoBenchmark& benchmark,
                       SecureKey& keys, const uint8_t salt[16],
+                      const std::filesystem::path& in_path,
+                      const std::filesystem::path& out_path,
                       ProgressDisplay on_progress = nullptr) {
-
-        std::filesystem::path in_path(crypto_entry.crypto_values.in);
                     
-        bool has_out = !crypto_entry.crypto_values.out.empty();
+        bool has_out = !out_path.empty();
         std::filesystem::path final_path = has_out
-            ? std::filesystem::path(crypto_entry.crypto_values.out)
+            ? out_path
             : in_path;
                     
         std::filesystem::path work_path = final_path;
@@ -72,6 +71,7 @@ public:
                         
             switch (crypto_entry.crypto_values.algorithm) {
                 case CryptoAlgorithms::KYZ_CBC: {
+                    Kyznechik& kyz = std::get<Kyznechik>(crypto_entry.crypto_values.cipher);
                     kyz.cbc_generate_iv();
                     memcpy(header.iv, kyz.cbc_prev_block, sizeof(header.iv));
                     break;
@@ -111,6 +111,7 @@ public:
     
                 switch (crypto_entry.crypto_values.algorithm) {
                     case CryptoAlgorithms::KYZ_ECB: {
+                        Kyznechik& kyz = std::get<Kyznechik>(crypto_entry.crypto_values.cipher);
                         if (use_avx2) {
                             #pragma omp parallel for
                             for (size_t i = 0; i < read_bytes; i += 128) {
@@ -125,6 +126,7 @@ public:
                         break;
                     }
                     case CryptoAlgorithms::KYZ_CBC: {
+                        Kyznechik& kyz = std::get<Kyznechik>(crypto_entry.crypto_values.cipher);
                         for (size_t i = 0; i < read_bytes; i += 16) {
                             kyz.cbc_encrypt_block(buffer.data() + i);
                         }
@@ -172,17 +174,16 @@ public:
         }
     }
 
-    void decrypt_file(Kyznechik& kyz,
-                       CryptoEntry& crypto_entry,
-                       CryptoBenchmark& benchmark,
-                       SecureKey& keys,
-                       ProgressDisplay on_progress = nullptr) {
+    void decrypt_file(CryptoEntry& crypto_entry,
+                      CryptoBenchmark& benchmark,
+                      SecureKey& keys,
+                      const std::filesystem::path& in_path,
+                      const std::filesystem::path& out_path,
+                      ProgressDisplay on_progress = nullptr) {
 
-        std::filesystem::path in_path(crypto_entry.crypto_values.in);
-
-        bool has_out = !crypto_entry.crypto_values.out.empty();
+        bool has_out = !out_path.empty();
         std::filesystem::path final_path = has_out
-            ? std::filesystem::path(crypto_entry.crypto_values.out)
+            ? out_path
             : in_path;
 
         std::filesystem::path work_path = final_path;
@@ -206,6 +207,7 @@ public:
 
         switch (static_cast<CryptoAlgorithms>(header.algorithm_mode)) {
             case CryptoAlgorithms::KYZ_CBC: {
+                Kyznechik& kyz = std::get<Kyznechik>(crypto_entry.crypto_values.cipher);
                 std::memcpy(kyz.cbc_prev_block, header.iv, sizeof(header.iv));
                 break;
             }
@@ -269,6 +271,7 @@ public:
     
                 switch (static_cast<CryptoAlgorithms>(header.algorithm_mode)) {
                     case CryptoAlgorithms::KYZ_ECB: {
+                        Kyznechik& kyz = std::get<Kyznechik>(crypto_entry.crypto_values.cipher);
                         if (use_avx2) {
                             #pragma omp parallel for
                             for (size_t i = 0; i < read_bytes; i += 128) {
@@ -283,6 +286,7 @@ public:
                         break;
                     }
                     case CryptoAlgorithms::KYZ_CBC: {
+                        Kyznechik& kyz = std::get<Kyznechik>(crypto_entry.crypto_values.cipher);
                         for (size_t i = 0; i < read_bytes; i += 16) {
                             kyz.cbc_decrypt_block(buffer.data() + i);
                         }
@@ -337,7 +341,7 @@ public:
     }
 };
 
-inline void encrypt_something(Kyznechik& kyz, CryptoEntry& crypto_entry) {
+inline void encrypt_something(CryptoEntry& crypto_entry) {
     /*   Header the encrypt file:
      *   [
      *       magic-bytes (8 bytes) & version (1 byte) & algorithm-mode (1 byte) &
@@ -346,21 +350,28 @@ inline void encrypt_something(Kyznechik& kyz, CryptoEntry& crypto_entry) {
      *   at the end file: MAC-TAG (32 byte)
      */
 
-    string password = ask_password_hidden();
+    std::string password = ask_password_hidden("Password: ");
 
     CryptoActions crypto_action;
     ProgressDisplay progress("Encrypt");
+    bool verbose = crypto_entry.crypto_flags.verbose;
 
     if (filesystem::is_directory(crypto_entry.crypto_values.in)) {
+        int counter = 0;
         CryptoBenchmark benchmark;
         vector<pair<string, string>> skipped;
 
         array<uint8_t, 32> master_session_secret; 
         fill_session_key(crypto_entry, password, master_session_secret);
-        for (int i = 0; i < 32; i++) {
-            kyz.master_key[i] = master_session_secret[i];
+        
+        if (std::holds_alternative<Kyznechik>(crypto_entry.crypto_values.cipher)) {
+            Kyznechik& kyz = std::get<Kyznechik>(crypto_entry.crypto_values.cipher);
+
+            for (int i = 0; i < 32; i++) {
+                kyz.master_key[i] = master_session_secret[i];
+            }
+            kyz.init();
         }
-        kyz.init();
 
         std::vector<std::filesystem::path> files;
         unsigned long long total_bytes = 0;
@@ -373,20 +384,18 @@ inline void encrypt_something(Kyznechik& kyz, CryptoEntry& crypto_entry) {
         unsigned long long processed_before_this_file = 0;
 
         for (auto& path : files) {
-            CryptoEntry file_entry = crypto_entry;
-            file_entry.crypto_values.in = path.string();
-            file_entry.crypto_values.out.clear(); // without --out flag
-
             unsigned long long file_size = filesystem::file_size(path);
 
             SecureKey keys;
             uint8_t salt[16];
 
-            derive_multifile_keys(master_session_secret.data(), salt, kyz, keys, nullptr);
+        
+            derive_multifile_keys(master_session_secret.data(), salt, crypto_entry, keys, nullptr);
 
             try {
                 crypto_action.encrypt_file(
-                    kyz, file_entry, benchmark, keys, salt,
+                    crypto_entry, benchmark, keys, salt,
+                    path, std::filesystem::path {},
                     [&](unsigned long long processed) {
                         unsigned long long overall = processed_before_this_file + processed;
                         int percent = total_bytes > 0
@@ -395,6 +404,11 @@ inline void encrypt_something(Kyznechik& kyz, CryptoEntry& crypto_entry) {
                         progress.set_progress(percent);
                     }
                 );
+
+                counter++;
+                if (verbose) {
+                    std::cout << counter << ". Encrypted: " << path.string() << "\n";
+                }
             } catch(std::exception& ex) {
                 skipped.push_back(make_pair(path.string(), ex.what()));
                 continue;
@@ -407,29 +421,31 @@ inline void encrypt_something(Kyznechik& kyz, CryptoEntry& crypto_entry) {
             }
         }
 
-        progress.finish();
-        cout << "\n";
+        //progress.finish();
+        std::cout << "\n";
         if (crypto_entry.crypto_flags.verbose) {
             benchmark.print_session_report();
         }
 
         if(skipped.size() >= 1) {
-            cout << "Skipped: \n\n";
+            std::cout << "Skipped: \n\n";
             for(int i = 0; i < skipped.size(); i++) {
-                cout << skipped[i].first << ": " << skipped[i].second << "\n";
+                std::cout << skipped[i].first << ": " << skipped[i].second << "\n";
             }
         }
     } else {
         SecureKey keys;
         uint8_t salt[16];
 
-        derive_file_keys(password, crypto_entry.crypto_values.kdf_iterations, salt, kyz, keys);
+        derive_file_keys(password, crypto_entry.crypto_values.kdf_iterations, salt, crypto_entry, keys);
 
         CryptoBenchmark benchmark;
         unsigned long long file_size = filesystem::file_size(crypto_entry.crypto_values.in);
 
         crypto_action.encrypt_file(
-            kyz, crypto_entry, benchmark, keys, salt,
+            crypto_entry, benchmark, keys, salt,
+            crypto_entry.crypto_values.in,
+            std::filesystem::path {},
             [&](unsigned long long processed) {
                 int percent = file_size > 0
                     ? static_cast<int>(processed * 100 / file_size)
@@ -439,32 +455,37 @@ inline void encrypt_something(Kyznechik& kyz, CryptoEntry& crypto_entry) {
         );
 
         if (crypto_entry.crypto_flags.verbose) {
-            cout << "\n";
+            std::cout << "\n";
             benchmark.print_session_report();
         }
-        cout << "\n";
+        std::cout << "\n";
     }
 
     sodium_memzero(&password[0], password.size());
     password.clear();
 }
 
-inline void decrypt_something(Kyznechik& kyz, CryptoEntry& crypto_entry) {
-    string password = ask_password_hidden();
+inline void decrypt_something(CryptoEntry& crypto_entry) {
+    string password = ask_password_hidden("Password: ");
 
     CryptoActions crypto_action;
     ProgressDisplay progress("Decrypt");
+    bool verbose = crypto_entry.crypto_flags.verbose;
 
     if (filesystem::is_directory(crypto_entry.crypto_values.in)) {
         CryptoBenchmark benchmark;
         vector<pair<string, string>> skipped;
+        int counter = 0;
 
         std::array<uint8_t, 32> master_session_secret;
-        fill_session_key(crypto_entry, password, master_session_secret);
-        for(int i = 0; i < 32; i++) {
-            kyz.master_key[i] = master_session_secret[i];
+        if (std::holds_alternative<Kyznechik>(crypto_entry.crypto_values.cipher)) {
+            Kyznechik& kyz = std::get<Kyznechik>(crypto_entry.crypto_values.cipher);
+            fill_session_key(crypto_entry, password, master_session_secret);
+            for(int i = 0; i < 32; i++) {
+                kyz.master_key[i] = master_session_secret[i];
+            }
+            kyz.init();
         }
-        kyz.init();
 
         std::vector<std::filesystem::path> files;
         unsigned long long total_bytes = 0;
@@ -477,10 +498,6 @@ inline void decrypt_something(Kyznechik& kyz, CryptoEntry& crypto_entry) {
         unsigned long long processed_before_this_file = 0;
 
         for (auto& path : files) {
-            CryptoEntry file_entry = crypto_entry;
-            file_entry.crypto_values.in = path.string();
-            file_entry.crypto_values.out.clear();
-
             unsigned long long file_size = filesystem::file_size(path);
 
             EncryptFileHeader header;
@@ -492,11 +509,12 @@ inline void decrypt_something(Kyznechik& kyz, CryptoEntry& crypto_entry) {
 
             SecureKey keys;
             uint8_t scratch_salt[16];
-            derive_multifile_keys(master_session_secret.data(), scratch_salt, kyz, /*mac_key=*/keys, header.salt);
+            derive_multifile_keys(master_session_secret.data(), scratch_salt, crypto_entry, /*mac_key=*/keys, header.salt);
 
             try {
                 crypto_action.decrypt_file(
-                    kyz, file_entry, benchmark, keys,
+                    crypto_entry, benchmark, keys,
+                    path, std::filesystem::path {},
                     [&](unsigned long long processed) {
                         unsigned long long overall = processed_before_this_file + processed;
                         int percent = total_bytes > 0
@@ -505,6 +523,11 @@ inline void decrypt_something(Kyznechik& kyz, CryptoEntry& crypto_entry) {
                         progress.set_progress(percent);
                     }
                 );
+
+                if (verbose) {
+                    std::cout << counter << ". Decrypted" << path.string() << "\n";
+                }
+
             } catch(std::exception& ex) {
                 skipped.push_back(make_pair(path.string(), ex.what()));
                 continue;
@@ -517,7 +540,7 @@ inline void decrypt_something(Kyznechik& kyz, CryptoEntry& crypto_entry) {
             }
         }
 
-        progress.finish();
+        //progress.finish();
         cout << "\n";
         if (crypto_entry.crypto_flags.verbose) {
             cout << "\n";
@@ -540,13 +563,15 @@ inline void decrypt_something(Kyznechik& kyz, CryptoEntry& crypto_entry) {
 
         SecureKey keys;
         uint8_t scratch_salt[16];
-        derive_file_keys(password, header.kdf_iterations, scratch_salt, kyz, /*mac_key=*/keys, header.salt);
+        derive_file_keys(password, header.kdf_iterations, scratch_salt, crypto_entry, /*mac_key=*/keys, header.salt);
 
         CryptoBenchmark benchmark;
         unsigned long long file_size = filesystem::file_size(crypto_entry.crypto_values.in);
 
         crypto_action.decrypt_file(
-            kyz, crypto_entry, benchmark, keys,
+            crypto_entry, benchmark, keys,
+            std::filesystem::path(crypto_entry.crypto_values.in),
+            std::filesystem::path {},
             [&](unsigned long long processed) {
                 int percent = file_size > 0
                     ? static_cast<int>(processed * 100 / file_size)
