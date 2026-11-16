@@ -92,7 +92,7 @@ public:
         std::cout << "\n" << "Total program time (s):     " << total_session_time.count() << "\n"
                    << "Time spent encrypting (s): " << total_encrypt_time.count() << "\n"
                    << "Cryption speed (MB/s):   " << mb_per_sec << "\n"
-                   << "Bytes encrypted:           " << total_encrypted_bytes << "\n";
+                   << "Bytes processed:         " << total_encrypted_bytes << "\n";
     }
 
     double session_seconds() const {
