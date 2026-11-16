@@ -115,7 +115,7 @@
     } \
 } while (0)
 
-struct chacha20
+struct ChaCha20
 {
 public:
     void quarter_round(
