@@ -6,6 +6,7 @@
 
 #include <iostream>
 #include <iomanip>
+#include <cstring>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -21,9 +22,13 @@
 
 using namespace std;
 
-void derive_keys(const uint8_t master_secret[32], Kyznechik& kyz, SecureKey& out) {
-    crypto_kdf_derive_from_key(kyz.master_key, 32, 1, "BITMASK", master_secret);
-    crypto_kdf_derive_from_key(out.mac_key, sizeof(out.mac_key), 2, "BITMASK", master_secret);
+void derive_keys(const uint8_t master_secret[32], CryptoEntry& crypto_entry, SecureKey& out) {
+    if (std::holds_alternative<Kyznechik>(crypto_entry.crypto_values.cipher)) {
+        Kyznechik& kyz = std::get<Kyznechik>(crypto_entry.crypto_values.cipher);
+
+        crypto_kdf_derive_from_key(kyz.master_key, 32, 1, "BITMASK", master_secret);
+        crypto_kdf_derive_from_key(out.mac_key, sizeof(out.mac_key), 2, "BITMASK", master_secret);
+    }
 }
 
 void kyz_fingerprint(Kyznechik& kyz) {
@@ -127,7 +132,7 @@ string ask_password_hidden(const string& prompt) {
 }
 
 void derive_file_keys(const std::string& password, int iters,
-                       uint8_t out_salt[16], Kyznechik& kyz, SecureKey& keys,
+                       uint8_t out_salt[16], CryptoEntry& crypto_entry, SecureKey& keys,
                        const uint8_t* in_salt) {
     std::array<uint8_t, 32> this_hash = {0};
     std::string salted_password = password;
@@ -135,7 +140,7 @@ void derive_file_keys(const std::string& password, int iters,
     if (in_salt == nullptr) {
         randombytes_buf(out_salt, 16);
     } else {
-        std::memcpy(out_salt, in_salt, 16);
+        memcpy(out_salt, in_salt, 16);
     }
     salted_password.reserve(password.size() + 16);
     for (int i = 0; i < 16; i++) salted_password += out_salt[i];
@@ -147,33 +152,40 @@ void derive_file_keys(const std::string& password, int iters,
         this_hash = sha.digest();
     }
 
-    derive_keys(this_hash.data(), kyz, keys);
+    derive_keys(this_hash.data(), crypto_entry, keys);
+    
     sodium_memzero(this_hash.data(), this_hash.size());
     sodium_memzero(&salted_password[0], salted_password.size());
 
-    kyz.init();
+    if (std::holds_alternative<Kyznechik>(crypto_entry.crypto_values.cipher)) {
+        Kyznechik& kyz = std::get<Kyznechik>(crypto_entry.crypto_values.cipher);
+        kyz.init();
+    }
 }
 
 void derive_multifile_keys(const uint8_t master_session_secret[32], 
-                           uint8_t out_salt[16], Kyznechik& kyz, SecureKey& keys,
+                           uint8_t out_salt[16], CryptoEntry& crypto_entry, SecureKey& keys,
                            const uint8_t* in_salt) {
     if (in_salt == nullptr) {
         randombytes_buf(out_salt, 16);
     } else {
-        std::memcpy(out_salt, in_salt, 16);
+        memcpy(out_salt, in_salt, 16);
     }
 
     uint32_t subkey_id = 0;
-    std::memcpy(&subkey_id, out_salt, 4);
+    memcpy(&subkey_id, out_salt, 4);
 
     uint8_t file_secret[32];
     crypto_kdf_derive_from_key(file_secret, 32, subkey_id, "FILE_KEY", master_session_secret);
 
-    derive_keys(file_secret, kyz, keys); 
+    if (std::holds_alternative<Kyznechik>(crypto_entry.crypto_values.cipher)) {
+        Kyznechik& kyz = std::get<Kyznechik>(crypto_entry.crypto_values.cipher);
+        derive_keys(file_secret, crypto_entry, keys);
+        
+        kyz.expand_keys();
+    }
 
     sodium_memzero(file_secret, 32);
-
-    kyz.expand_keys();
 }
 
 void fill_session_key(
