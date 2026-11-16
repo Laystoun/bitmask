@@ -13,7 +13,7 @@
 
 struct chacha20Vectors
 {
-    chacha20 cipher;
+    ChaCha20 cipher;
 
     // =====================================
     // 1. QUARTER ROUND TEST
@@ -158,7 +158,7 @@ struct chacha20Vectors
 struct chacha20AvxVectors
 {
     ChaCha20AVX cipher;
-    chacha20    base;
+    ChaCha20    base;
 
     // =====================================
     // 1. QUARTER ROUND TEST (AVX2)
