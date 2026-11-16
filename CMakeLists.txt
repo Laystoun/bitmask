@@ -6,19 +6,30 @@ project(
 find_package(OpenMP REQUIRED)
 add_executable(bitmask
     crypto/kyznechik.cpp
-    crypto/utils/cli.cpp
     crypto/utils/key_utils.cpp
     crypto/kyz_cbc.cpp
     crypto/pkcs.cpp
     crypto/SHA256.cpp
+    shell/main.cpp
+    # The network stack has been temporarily disabled due to
+    # the absence of static linking for the npcap network library.
+    #[[
     network/arp_spoof.cpp
     network/dns_spoof.cpp
-    shell/main.cpp
+    ]]
     shell/shell.cpp
 )
 target_compile_options(bitmask PRIVATE
     -O3
 )
+
+#[[
+target_compile_definitions(bitmask PRIVATE
+    KYZ_DEBUG_FINGERPRINT
+    KYZ_DEBUG_DESTRUCTOR
+)
+]]
+
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     target_compile_options(bitmask PRIVATE -mavx2)
 endif()
@@ -43,6 +54,11 @@ set_target_properties(bitmask PROPERTIES
 target_include_directories(bitmask PRIVATE
     "${CMAKE_SOURCE_DIR}/Include/sodium/include"
     "${CMAKE_SOURCE_DIR}/Include/npcap/Include"
+    "${CMAKE_SOURCE_DIR}"
+    "${CMAKE_SOURCE_DIR}/crypto"
+    "${CMAKE_SOURCE_DIR}/utils"
+    "${CMAKE_SOURCE_DIR}/shell"
+    "${CMAKE_SOURCE_DIR}/shell/log"
 )
 target_link_libraries(bitmask PRIVATE
     OpenMP::OpenMP_CXX
