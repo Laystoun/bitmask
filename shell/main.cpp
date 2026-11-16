@@ -33,7 +33,7 @@ int main(int argc, char *argv[])
         crypto_cli(crypto_entry);
     }
     else if (*network_sub) {
-        network_cli(network_entry);
+        // network_cli(network_entry);
     }
     else {
         std::cout << "No subcommand provided. Use --help for usage.\n";
