@@ -15,7 +15,11 @@
 #include <array>
 #include <iostream>
 #include <thread>
-#include <chrono>
+#include <algorithm>
+#include <random>
+#include <emmintrin.h>
+#include <immintrin.h>
+#include <sodium.h>
 
 #ifdef _WIN32
     #include <windows.h>
@@ -23,9 +27,6 @@
     #include <string.h>
     #include <strings.h>
 #endif
-
-#include "utils/key_utils.h"
-#include "../shell/shell.h"
 
 typedef std::array<uint8_t,16> r_key;
 
@@ -4478,6 +4479,8 @@ public:
     std::array<std::array<uint8_t,16>,10> ROUND_KEYS;
     std::array<std::array<uint8_t,16>,32> ITER_CONSTANTS;
 
+    
+
     // BASE | AVX2 ECB ENCRYPT MODE
     void init();
     void L_transformation(uint8_t* p_inf);
@@ -4504,47 +4507,19 @@ public:
     void cbc_decrypt_block(uint8_t* p_inf);
 
     ~Kyznechik() {
-        volatile uint8_t* p = master_key;
-            
         #ifdef _WIN32
             SecureZeroMemory((PVOID)master_key, 32);
             for (int r_k = 0; r_k < 10; r_k++)
                 SecureZeroMemory((PVOID)ROUND_KEYS[r_k].data(), 16);
         #elif defined(__linux__)
             explicit_bzero((void*)master_key, 32);
+            for (int r_k = 0; r_k < 10; r_k++)
+                explicit_bzero(ROUND_KEYS[r_k].data(), 16);
         #endif
 
-            
-        
-        for (size_t i = 0; i < 32; i++) {
-            switch (i) {
-                case 0:  p[i] = 0x46; break;
-                case 1:  p[i] = 0x53; break;
-                case 2:  p[i] = 0x42; break;
-                case 3:  p[i] = 0x20; break;
-                case 4:  p[i] = 0x53; break;
-                case 5:  p[i] = 0x6f; break;
-                case 6:  p[i] = 0x73; break;
-                case 7:  p[i] = 0x69; break;
-                case 8:  p[i] = 0x74; break;
-                case 9:  p[i] = 0x65; break;
-                case 10: p[i] = 0x29; break;
-                case 11: p[i] = 0x29; break;
-                case 12: p[i] = 0x29; break;
-                default: p[i] = 0x00;
-            }
-        }
-
-        for (size_t r_k = 0; r_k < 10; r_k++) {
-            volatile uint8_t* rp = ROUND_KEYS[r_k].data();
-            for (size_t b = 0; b < 16; b++) {
-                rp[b] = 0x00;
-            }
-        }
-
-        std::wcout << "the encryption key was destroyed in RAM\nmemory dump not possible..." << std::endl;
-    
-        std::this_thread::sleep_for(std::chrono::seconds(5));
+        #ifdef KYZ_DEBUG_DESTRUCTOR
+            std::wcout << "~Kyznechik " << this << std::endl;
+        #endif
     }
     
 };
