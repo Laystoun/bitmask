@@ -173,7 +173,7 @@ private:
         // How many blocks are still available from the current counter
         const std::uint64_t available_blocks =
             static_cast<std::uint64_t>(
-                std::numeric_limits<std::uint32_t>::max()
+                (std::numeric_limits<std::uint32_t>::max)()
             ) - counter + 1ULL;
 
         // Checking for overflow before processing begins
